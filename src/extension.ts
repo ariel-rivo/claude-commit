@@ -3,6 +3,7 @@
 import * as vscode from 'vscode';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import * as path from 'path';
 
 const execAsync = promisify(exec);
 
@@ -715,13 +716,13 @@ export function activate(context: vscode.ExtensionContext) {
         outputChannel.show(); // Show output on activation in debug mode
     }
 
-    const createCommitDisposable = vscode.commands.registerCommand('claude-commit.createCommitMessage', async (uri?: vscode.Uri) => {
+    const createCommitDisposable = vscode.commands.registerCommand('claude-commit.createCommitMessage', async (arg?: vscode.Uri | vscode.SourceControl) => {
         const config = vscode.workspace.getConfiguration('claude-commit');
         const debugMode = config.get<boolean>('debugMode') || false;
         
         if (debugMode) {
             outputChannel.appendLine('\n=== COMMAND TRIGGERED ===');
-            outputChannel.appendLine(`URI: ${uri?.toString() || 'none'}`);
+            outputChannel.appendLine(`Arg: ${arg?.toString() || 'none'}`);
             outputChannel.show(); // Show output when command is triggered in debug mode
         }
         
@@ -753,20 +754,24 @@ export function activate(context: vscode.ExtensionContext) {
             
             let targetRepo;
 
-            // Find repository
-            if (uri) {
-                const uriPath = (uri as any).E?.fsPath || uri.path;
+            // Find repository. In a multi-root workspace, clicking the button on a
+            // specific repository's SCM title bar passes that repository's
+            // SourceControl instance (with a `rootUri`), not a Uri. Other menu
+            // locations (e.g. a resource in the changes list) pass a Uri instead.
+            if (arg) {
+                const argPath = (arg as vscode.SourceControl).rootUri?.fsPath
+                    ?? (arg as vscode.Uri).fsPath;
                 if (debugMode) {
-                    outputChannel.appendLine(`[GIT] Looking for repo matching: ${uriPath}`);
+                    outputChannel.appendLine(`[GIT] Looking for repo matching: ${argPath}`);
                 }
-                
+
                 targetRepo = git.repositories.find((repo: any) => {
                     const repoPath = repo.rootUri.fsPath;
-                    return uriPath && uriPath.startsWith(repoPath);
+                    return argPath && (argPath === repoPath || argPath.startsWith(repoPath + path.sep));
                 });
-                
+
                 if (!targetRepo && debugMode) {
-                    outputChannel.appendLine('[GIT] No matching repo for URI');
+                    outputChannel.appendLine('[GIT] No matching repo for arg');
                 }
             }
 
