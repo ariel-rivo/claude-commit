@@ -2,7 +2,7 @@
   "name": "claude-commit",
   "displayName": "Claude Commit",
   "description": "Generate smart commit messages with Claude CLI",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "publisher": "juanlb",
   "author": {
     "name": "JLB"
